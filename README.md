@@ -73,6 +73,8 @@ npm install jsonwebtoken
 (5) Install Paket Swagger :
 npm install swagger-ui-express swagger-jsdoc
 
+Dokumentasi API (Swagger / Postman): Membuat buku panduan interaktif yang mencatat seluruh endpoint, format JSON, dan aturan otorisasi sistem kita. Ini adalah standar wajib jika Anda bekerja di tim perusahaan nyata agar developer frontend tidak bingung saat memakai API Anda.
+
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
 ✅ Sistem Authentication standar industri menggunakan Token (JWT)
