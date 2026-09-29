@@ -58,17 +58,20 @@ npm install express cors dotenv mysql2 sequelize
 4. Install tools tambahan untuk mempermudah saat coding:
 npm install --save-dev nodemon
 
-5. Untuk Menjalankan Node.js nya
+5. Untuk Menjalankan Node.js nya :
 npx nodemon index.js
 
-(2) Install Alat Enkripsi Password
+(2) Install Alat Enkripsi Password :
 npm install bcryptjs
 
 (3) Install Test API : Thunder Client ( VSS Code Extensions )
 
 
-(4) Install JWT (JSON Web Token)
+(4) Install JWT (JSON Web Token) :
 npm install jsonwebtoken
+
+(5) Install Paket Swagger :
+npm install swagger-ui-express swagger-jsdoc
 
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
