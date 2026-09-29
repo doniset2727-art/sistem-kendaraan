@@ -7,15 +7,41 @@ Push Notification : Firebase Cloud Messaging (FCM)
 File Storage : Google Cloud Storage (Lampiran foto struk, tol, & odometer)
 Background Queue : Redis
 
-departments] ──1:N──> [users] (Self-referencing manager_id)
-                         │
-                         ├──1:N──> [bookings] ──1:1──> [assignments] ──1:1──> [trip_logs] ──1:N──> [trip_receipts]
-                         │            │                     │                     │
-                         │            │                     ├──N:1──> [vehicles] ──┘
-                         │            │                     │
-                         └────────────┴─────────────────────┴──N:1──> [drivers]
-[notifications] <──N:1── [users]
-[drivers]       <──1:1── [users]
+departments
+    │
+    └──1:N──> users ◄──┐
+                │      │ (self-reference: manager_id)
+                │      └──────────────┘
+                │
+                ├──1:1──> drivers
+                │
+                ├──1:N──> notifications
+                │
+                └──1:N──> bookings
+                              │
+                              ├──N:1──> vehicles
+                              │
+                              └──1:1──> assignments
+                                            │
+                                            ├──N:1──> vehicles
+                                            ├──N:1──> drivers
+                                            │
+                                            └──1:1──> trip_logs
+                                                          │
+                                                          └──1:N──> trip_receipts
+
+Ringkasan Relasi
+Dari	Relasi	Ke	Keterangan
+departments ->	1:N	-> users	( Satu departemen punya banyak user )
+users	-> N:1	-> users	( Self-reference lewat manager_id (atasan) )
+users	-> 1:1	-> drivers	( Satu user bisa menjadi satu driver )
+users	-> 1:N	-> notifications	( Satu user menerima banyak notifikasi )
+users	-> 1:N	-> bookings	( Satu user membuat banyak booking )
+bookings ->	1:1	-> assignments	( Satu booking menghasilkan satu penugasan )
+assignments	-> 1:1	-> trip_logs	( Satu penugasan punya satu log perjalanan )
+trip_logs	-> 1:N	-> trip_receipts	( Satu log punya banyak bukti/struk )
+bookings / assignments	-> N:1	-> vehicles	( Banyak booking/penugasan memakai satu kendaraan )
+assignments / trip_logs	-> N:1	-> drivers	( Satu driver menangani banyak penugasan/perjalanan )
 
 (1) Step-step Inisialisasi Project Server
 
