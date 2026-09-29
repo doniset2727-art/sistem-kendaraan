@@ -86,6 +86,8 @@ npm install react-router-dom axios
 
 (8) Install React Bootstrap ( Frontend ) : npm install react-bootstrap bootstrap
 
+(9) Install jwt-decode : npm install jwt-decode
+
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
 ✅ Sistem Authentication standar industri menggunakan Token (JWT)
