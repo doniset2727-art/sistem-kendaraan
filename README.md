@@ -82,6 +82,8 @@ kita menginstal dua paket paling penting di React:
 *axios: Kurir andalan kita untuk menembak API (GET/POST) ke backend Node.js.
 npm install react-router-dom axios
 
+(7) Install/Pasang CORS di Backend (Node.js) : npm install cors
+
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
 ✅ Sistem Authentication standar industri menggunakan Token (JWT)
