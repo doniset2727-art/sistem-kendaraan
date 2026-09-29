@@ -76,6 +76,12 @@ URL : http://localhost:5000/api-docs
 
 Dokumentasi API (Swagger / Postman): Membuat buku panduan interaktif yang mencatat seluruh endpoint, format JSON, dan aturan otorisasi sistem kita. Ini adalah standar wajib jika Anda bekerja di tim perusahaan nyata agar developer frontend tidak bingung saat memakai API Anda.
 
+(6)Install Paket Wajib (Router & Axios)
+kita menginstal dua paket paling penting di React:
+*react-router-dom: Untuk membuat navigasi halaman (pindah dari halaman Login ke Dashboard).
+*axios: Kurir andalan kita untuk menembak API (GET/POST) ke backend Node.js.
+npm install react-router-dom axios
+
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
 ✅ Sistem Authentication standar industri menggunakan Token (JWT)
