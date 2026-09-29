@@ -1,4 +1,6 @@
 const express = require('express');
+const swaggerUI = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
 const cors = require('cors');
 const db = require('./config/database'); // Memanggil file koneksi database
 require('dotenv').config();
@@ -61,6 +63,37 @@ Notification.belongsTo(User, { foreignKey: 'user_id' });
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Konfigurasi Swagger
+const swaggerOptions = {
+    swaggerDefinition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'API Sistem Kendaraan Perusahaan',
+            version: '1.0.0',
+            description: 'Dokumentasi interaktif untuk API Sistem Manajemen Kendaraan'
+        },
+        servers: [
+            {
+                url: 'http://localhost:5000',
+                description: 'Local Development Server'
+            }
+        ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                }
+            }
+        }
+    },
+    // Swagger akan membaca anotasi dokumentasi dari semua file di folder routes
+    apis: ['./routes/*.js'], 
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocs));
 
 // Daftar Routes
 const departmentRoutes = require('./routes/departmentRoutes');

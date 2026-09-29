@@ -11,6 +11,7 @@ const TripLog = db.define('TripLog', {
     fuel_cost: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 },
     toll_cost: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 },
     parking_cost: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 },
+    other_cost: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 }, 
     validation_status: { type: DataTypes.ENUM('pending', 'validated', 'rejected'), defaultValue: 'pending' },
     validated_by: { type: DataTypes.BIGINT },
     validation_note: { type: DataTypes.TEXT }

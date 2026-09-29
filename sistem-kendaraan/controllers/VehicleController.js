@@ -35,3 +35,19 @@ exports.createVehicle = async (req, res) => {
         return res.status(500).json({ status: 'Error', message: error.message });
     }
 };
+
+// Fungsi untuk mengambil semua data kendaraan
+exports.getAllVehicles = async (req, res) => {
+    try {
+        // Mengambil seluruh data dari tabel Vehicles
+        const vehicles = await Vehicle.findAll();
+        
+        return res.status(200).json({
+            status: 'Sukses',
+            message: 'Berhasil mengambil data kendaraan',
+            data: vehicles
+        });
+    } catch (error) {
+        return res.status(500).json({ status: 'Error', message: error.message });
+    }
+};
