@@ -84,6 +84,8 @@ npm install react-router-dom axios
 
 (7) Install/Pasang CORS di Backend (Node.js) : npm install cors
 
+(8) Install React Bootstrap ( Frontend ) : npm install react-bootstrap bootstrap
+
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
 ✅ Sistem Authentication standar industri menggunakan Token (JWT)
