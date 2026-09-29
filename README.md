@@ -88,6 +88,8 @@ npm install react-router-dom axios
 
 (9) Install jwt-decode : npm install jwt-decode
 
+(10) Install Library Recharts : npm install recharts
+
 Fitur FItur yang sudah di Bangun / sudah dibuat :
 ✅ Sistem Master Data terintegrasi (Departemen, User, Kendaraan, Supir)
 ✅ Sistem Authentication standar industri menggunakan Token (JWT)
