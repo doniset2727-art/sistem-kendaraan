@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/BookingController');
+const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
 
-// Jalur untuk membuat pesanan baru (Staff)
-router.post('/', bookingController.createBooking);
+// Siapapun yang login bisa melihat riwayat pesanan dan membuat pesanan
+router.get('/history', verifyToken, bookingController.getBookingHistory);
+router.post('/', verifyToken, bookingController.createBooking);
 
-// Jalur untuk menyetujui/menolak pesanan (Manager)
-// Tanda :id artinya angka id-nya bisa berubah-ubah (dinamis)
-router.put('/:id/approve', bookingController.approveBooking);
-// Tambahkan baris ini di bawah rute-rute yang sudah ada
-router.get('/history', bookingController.getBookingHistory);
+// HANYA Manager yang boleh melakukan Approve/Reject
+router.put('/:id/approve', verifyToken, verifyRole('manager'), bookingController.approveBooking);
 
 module.exports = router;

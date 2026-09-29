@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const tripLogController = require('../controllers/TripLogController');
+const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
 
-// Jalur untuk supir mengirim laporan
-router.post('/', tripLogController.submitTripLog);
+// HANYA Supir yang boleh mengirim form laporan perjalanan setelah tiba
+router.post('/', verifyToken, verifyRole('driver'), tripLogController.submitTripLog);
 
-// Jalur untuk admin memvalidasi laporan
-router.put('/:id/validate', tripLogController.validateTripLog);
+// HANYA Admin yang boleh memvalidasi (menyetujui) laporan pengeluaran
+router.put('/:id/validate', verifyToken, verifyRole('admin'), tripLogController.validateTripLog);
 
 module.exports = router;

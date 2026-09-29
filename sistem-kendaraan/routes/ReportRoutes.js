@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/ReportController');
+const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
 
-// Jalur untuk melihat rekap biaya
-router.get('/costs', reportController.getCostRecap);
+// HANYA Admin dan Manager yang berhak melihat rekapitulasi biaya perusahaan
+router.get('/costs', verifyToken, verifyRole('admin', 'manager'), reportController.getCostRecap);
 
 module.exports = router;

@@ -1,14 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/NotificationController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
-// Jalur untuk mengirim notifikasi baru
-router.post('/', notificationController.createNotification);
-
-// Jalur untuk melihat notifikasi milik user tertentu
-router.get('/user/:userId', notificationController.getUserNotifications);
-
-// Jalur untuk menandai notifikasi sudah dibaca
-router.put('/:id/read', notificationController.markAsRead);
+// Semua rute notifikasi bisa diakses asalkan user sudah login (verifyToken)
+router.post('/', verifyToken, notificationController.createNotification);
+router.get('/user/:userId', verifyToken, notificationController.getUserNotifications);
+router.put('/:id/read', verifyToken, notificationController.markAsRead);
 
 module.exports = router;
