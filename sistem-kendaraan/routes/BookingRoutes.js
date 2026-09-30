@@ -9,5 +9,7 @@ router.post('/', verifyToken, bookingController.createBooking);
 
 // HANYA Manager yang boleh melakukan Approve/Reject
 router.put('/:id/approve', verifyToken, verifyRole('manager'), bookingController.approveBooking);
+router.get('/my-bookings/:user_id', bookingController.getMyBookings);
+router.get('/approvals/:manager_id', bookingController.getManagerApprovals);
 
 module.exports = router;

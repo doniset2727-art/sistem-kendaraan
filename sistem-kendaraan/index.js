@@ -5,7 +5,7 @@ const cors = require('cors');
 const db = require('./config/database'); // Memanggil file koneksi database
 require('dotenv').config();
 
-//1. Panggil Semua Model
+// 1. Panggil Semua Model
 const Department = require('./models/Department');
 const User = require('./models/User');
 const Vehicle = require('./models/Vehicle');
@@ -63,6 +63,7 @@ Notification.belongsTo(User, { foreignKey: 'user_id' });
 const app = express();
 app.use(cors());
 app.use(express.json());
+
 // Konfigurasi Swagger
 const swaggerOptions = {
     swaggerDefinition: {
@@ -88,7 +89,6 @@ const swaggerOptions = {
             }
         }
     },
-    // Swagger akan membaca anotasi dokumentasi dari semua file di folder routes
     apis: ['./routes/*.js'], 
 };
 
@@ -112,10 +112,8 @@ const tripLogRoutes = require('./routes/tripLogRoutes');
 app.use('/api/v1/trip-logs', tripLogRoutes);
 const tripReceiptRoutes = require('./routes/tripReceiptRoutes');
 app.use('/api/v1/trip-receipts', tripReceiptRoutes);
-// TAMBAHKAN RUTE LAPORAN DI SINI
 const reportRoutes = require('./routes/reportRoutes');
 app.use('/api/v1/reports', reportRoutes);
-// TAMBAHKAN RUTE NOTIFIKASI DI SINI
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/api/v1/notifications', notificationRoutes);
 
@@ -124,11 +122,11 @@ db.authenticate()
     .then(() => {
         console.log('✅ Mantap! Database MySQL berhasil terkoneksi!');
         
-        // Perintah untuk membuat tabel otomatis (jika belum ada)
-        return db.sync();
+        // 👇 PENYESUAIAN KRUSIAL: Tambahkan { alter: true } agar MySQL otomatis menyesuaikan kolom baru
+        return db.sync({ alter: true });
     })
     .then(() => {
-        console.log('📦 Sinkronisasi Final selesai! Seluruh 9 Tabel siap digunakan.');
+        console.log('📦 Sinkronisasi Final selesai! Struktur tabel sudah ter-update secara otomatis.');
     })
     .catch(err => console.error('❌ Gagal:', err));
 

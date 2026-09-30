@@ -3,35 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = () => {
-  // Tempat menyimpan ketikan user
-  const [email, setEmail] = useState('');
+  const [nip, setNip] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // Fungsi yang dijalankan saat tombol "Masuk" ditekan
   const handleLogin = async (e) => {
-    e.preventDefault(); // Mencegah halaman refresh otomatis
+    e.preventDefault(); 
 
     try {
-      // 1. Tembak API Backend Node.js
       const response = await axios.post('http://localhost:5000/api/v1/users/login', {
-        email: email,
+        nip: nip,
         password: password
       });
 
-      // 2. Ambil token dari balasan backend
-      const token = response.data.data.token;
+      // 1. Ambil token dan sekumpulan data profil user dari balasan backend
+      const userData = response.data.data;
+      const token = userData.token;
 
-      // 3. Simpan token ke dalam "Brankas" Browser (Local Storage)
+      // 2. Simpan Token untuk akses API
       localStorage.setItem('token', token);
       
-      alert('Login Berhasil! 🎉');
+      // 3. Simpan Profil User (tanpa token) agar halaman lain mengenali siapa yang sedang aktif
+      const profile = { 
+        id: userData.id, 
+        name: userData.name, 
+        nip: userData.nip, 
+        role: userData.role,
+        department_id: userData.department_id // Berguna untuk filter departemen nanti
+      };
+      // Ubah jadi string sebelum masuk ke localStorage
+      localStorage.setItem('user', JSON.stringify(profile));
       
-      // 4. Pindah ke halaman Dashboard
-      navigate('/dashboard');
+      alert(`Login Berhasil sebagai ${userData.role.toUpperCase()}! 🎉`);
+      
+      // 4. POLISI LALU LINTAS (Mengarahkan sesuai jabatan)
+      if (userData.role === 'admin') {
+        // Jika Admin Kendaraan -> Masuk ke Pusat Kendali
+        navigate('/dashboard');
+      } else if (userData.role === 'manager') {
+        // Jika Manager -> Masuk ke Daftar Persetujuan (Approval)
+        navigate('/approvals');
+      } else {
+        // Jika Staff Biasa -> Masuk ke halaman Form Tiket Saya
+        navigate('/my-bookings');
+      }
 
     } catch (error) {
-      // Jika salah password / email tidak ada
       alert('Login Gagal: ' + (error.response?.data?.message || 'Terjadi kesalahan server'));
     }
   };
@@ -43,12 +60,13 @@ const Login = () => {
         
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '15px' }}>
-            <label>Email:</label><br />
+            <label>NIP:</label><br />
             <input 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              type="text" 
+              value={nip} 
+              onChange={(e) => setNip(e.target.value)} 
               required 
+              placeholder="Masukkan NIP Anda"
               style={{ width: '90%', padding: '8px', marginTop: '5px' }}
             />
           </div>
@@ -60,6 +78,7 @@ const Login = () => {
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               required 
+              placeholder="Masukkan Password"
               style={{ width: '90%', padding: '8px', marginTop: '5px' }}
             />
           </div>

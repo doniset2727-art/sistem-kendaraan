@@ -21,15 +21,18 @@ const Reports = () => {
     fetchReports();
   }, [token]);
 
-  const filteredReports = reports.filter((r) => 
-    r.Driver?.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.Booking?.Assignment?.Vehicle?.license_plate?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Bisa mencari berdasarkan NIP Supir
+  const filteredReports = reports.filter((r) => {
+    const searchLower = searchTerm.toLowerCase();
+    return r.Driver?.User?.name?.toLowerCase().includes(searchLower) ||
+           r.Driver?.User?.nip?.toLowerCase().includes(searchLower) ||
+           r.Booking?.Assignment?.Vehicle?.license_plate?.toLowerCase().includes(searchLower);
+  });
 
   const handleExport = () => {
     const headers = "ID Trip,Nama Supir,Kendaraan,KM Awal,KM Akhir,Bensin (Rp),Tol (Rp),Parkir (Rp),Lain-lain (Rp),Total (Rp),Status Validasi\n";
     const rows = filteredReports.map(r => {
-      const supir = r.Driver?.User?.name || '-';
+      const supir = r.Driver?.User?.name ? `${r.Driver.User.name} - ${r.Driver.User.nip}` : '-';
       const mobil = r.Booking?.Assignment?.Vehicle?.license_plate || '-';
       const total = Number(r.fuel_cost||0) + Number(r.toll_cost||0) + Number(r.parking_cost||0) + Number(r.other_cost||0);
       return `${r.id},"${supir}","${mobil}",${r.start_odometer||0},${r.end_odometer||0},${r.fuel_cost||0},${r.toll_cost||0},${r.parking_cost||0},${r.other_cost||0},${total},${r.validation_status}`;
@@ -57,7 +60,7 @@ const Reports = () => {
         <Card.Header className="bg-white border-bottom pt-3 pb-3 d-flex justify-content-between align-items-center">
           <InputGroup size="sm" style={{ width: '300px' }}>
             <InputGroup.Text>🔍</InputGroup.Text>
-            <Form.Control placeholder="Cari Nama Supir / Plat Nomor..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Form.Control placeholder="Cari Nama Supir / NIP / Plat..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </InputGroup>
           <Button variant="success" size="sm" onClick={handleExport}>📥 Export CSV</Button>
         </Card.Header>
@@ -84,7 +87,10 @@ const Reports = () => {
                   const total = Number(report.fuel_cost||0) + Number(report.toll_cost||0) + Number(report.parking_cost||0) + Number(report.other_cost||0);
                   return (
                     <tr key={report.id}>
-                      <td className="fw-bold">{report.Driver?.User?.name || 'Menunggu Relasi'}</td>
+                      {/* NIP SUPIR DITAMPILKAN DI SINI */}
+                      <td className="fw-bold">
+                        {report.Driver?.User?.name ? `${report.Driver.User.name} - ${report.Driver.User.nip}` : 'Menunggu Relasi'}
+                      </td>
                       <td>{report.Booking?.Assignment?.Vehicle?.license_plate || '-'}</td>
                       <td>{report.start_odometer || 0}</td>
                       <td>{report.end_odometer || 0}</td>

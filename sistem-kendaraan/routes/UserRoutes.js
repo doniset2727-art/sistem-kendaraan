@@ -4,6 +4,7 @@ const userController = require('../controllers/UserController');
 
 // Jalur untuk mendaftar user baru
 router.post('/register', userController.createUser);
+router.post('/', userController.createUser);
 
 /**
  * @swagger

@@ -1,23 +1,22 @@
 const TripLog = require('../models/TripLog');
-const db = require('../config/database'); // Panggil koneksi DB untuk fungsi SUM
+const db = require('../config/database'); 
 
-// Fungsi untuk merekap total pengeluaran
 exports.getCostRecap = async (req, res) => {
     try {
-        // Menggunakan fungsi bawaan SQL (SUM) untuk menjumlahkan kolom
         const totalCosts = await TripLog.findAll({
-            where: { validation_status: 'validated' }, // Hanya hitung yang sudah disetujui Admin
+            where: { validation_status: 'validated' }, 
             attributes: [
                 [db.fn('SUM', db.col('fuel_cost')), 'total_fuel'],
                 [db.fn('SUM', db.col('toll_cost')), 'total_toll'],
-                [db.fn('SUM', db.col('parking_cost')), 'total_parking']
+                [db.fn('SUM', db.col('parking_cost')), 'total_parking'],
+                [db.fn('SUM', db.col('other_cost')), 'total_other'] 
             ]
         });
 
         return res.status(200).json({
             status: 'Sukses',
             message: 'Berhasil merekap total biaya operasional kendaraan',
-            data: totalCosts[0] // Ambil data index ke-0 karena hasil SUM ada di sana
+            data: totalCosts[0] 
         });
 
     } catch (error) {

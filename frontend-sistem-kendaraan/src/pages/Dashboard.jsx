@@ -95,7 +95,8 @@ const Dashboard = () => {
   const handleExportLaporanBiaya = () => {
     const headers = "ID Trip,Nama Supir,Kendaraan,KM Awal,KM Akhir,Bensin (Rp),Tol (Rp),Parkir (Rp),Lain-lain (Rp),Total Biaya (Rp)\n";
     const rows = reports.map(r => {
-      const supir = r.Driver?.User?.name || '-';
+      // Menambahkan NIP pada Export Excel Biaya
+      const supir = r.Driver?.User?.name ? `${r.Driver.User.name} - ${r.Driver.User.nip}` : '-';
       const mobil = r.Booking?.Assignment?.Vehicle?.license_plate || '-';
       const total = Number(r.fuel_cost||0) + Number(r.toll_cost||0) + Number(r.parking_cost||0) + Number(r.other_cost||0);
       return `${r.id},"${supir}","${mobil}",${r.start_odometer||0},${r.end_odometer||0},${r.fuel_cost||0},${r.toll_cost||0},${r.parking_cost||0},${r.other_cost||0},${total}`;
@@ -104,13 +105,13 @@ const Dashboard = () => {
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Laporan_Biaya_${new Date().toISOString().slice(0,10)}.csv`; link.click();
   };
 
-  // 👇 FITUR EXPORT RADAR SUDAH DIUPDATE (Menambah Pemesan & Departemen & Supir & Mobil) 👇
   const handleExportRiwayatPerjalanan = () => {
     const headers = "Kode Booking,Pemesan,Departemen,Tgl Berangkat,Tujuan,Supir,Kendaraan,Status\n";
     const rows = bookings.map(b => {
-      const pemesan = b.User?.name || '-';
+      // Menambahkan NIP pada Export Excel Radar
+      const pemesan = b.User?.name ? `${b.User.name} - ${b.User.nip}` : '-';
       const departemen = b.User?.Department?.name || '-';
-      const supir = b.Assignment?.Driver?.User?.name || 'Belum Diplot';
+      const supir = b.Assignment?.Driver?.User?.name ? `${b.Assignment.Driver.User.name} - ${b.Assignment.Driver.User.nip}` : 'Belum Diplot';
       const kendaraan = b.Assignment?.Vehicle?.license_plate || 'Belum Diplot';
       return `${b.booking_code},"${pemesan}","${departemen}",${new Date(b.start_time).toLocaleDateString('id-ID')},"${b.destination_address}","${supir}","${kendaraan}",${b.status}`;
     }).join("\n");
@@ -118,11 +119,14 @@ const Dashboard = () => {
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Live_Radar_${new Date().toISOString().slice(0,10)}.csv`; link.click();
   };
 
-  // 👇 FITUR SEARCH JUGA BISA MENCARI NAMA PEMESAN 👇
+  // Menambahkan pencarian berdasarkan NIP
   const filteredBookings = bookings.filter((b) => {
-    const matchSearch = b.destination_address?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        b.booking_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        b.User?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch = b.destination_address?.toLowerCase().includes(searchLower) || 
+                        b.booking_code?.toLowerCase().includes(searchLower) ||
+                        b.User?.name?.toLowerCase().includes(searchLower) ||
+                        b.User?.nip?.toLowerCase().includes(searchLower) ||
+                        b.Assignment?.Driver?.User?.nip?.toLowerCase().includes(searchLower);
     const matchFilter = filterStatus === 'all' || b.status === filterStatus;
     return matchSearch && matchFilter;
   });
@@ -235,7 +239,10 @@ const Dashboard = () => {
                   const total = Number(report.fuel_cost||0) + Number(report.toll_cost||0) + Number(report.parking_cost||0) + Number(report.other_cost||0);
                   return (
                     <tr key={report.id}>
-                      <td className="fw-bold">{report.Driver?.User?.name || 'Menunggu Relasi'}</td>
+                      {/* 👇 NIP SUPIR DITAMPILKAN DI SINI 👇 */}
+                      <td className="fw-bold">
+                        {report.Driver?.User?.name ? `${report.Driver.User.name} - ${report.Driver.User.nip}` : 'Menunggu Relasi'}
+                      </td>
                       <td>{report.Booking?.Assignment?.Vehicle?.license_plate || '-'}</td>
                       <td>{report.start_odometer || 0}</td>
                       <td>{report.end_odometer || 0}</td>
@@ -255,7 +262,7 @@ const Dashboard = () => {
         </Card.Body>
       </Card>
 
-      {/* 👇 TABEL LIVE RADAR SUDAH DIUPDATE KOLOMNYA 👇 */}
+      {/* TABEL LIVE RADAR */}
       <Card className="shadow-sm border-0 mb-4">
         <Card.Header className="bg-white border-bottom pt-3 pb-3">
           <div className="d-flex justify-content-between align-items-center">
@@ -263,7 +270,7 @@ const Dashboard = () => {
             <div className="d-flex gap-2">
               <InputGroup size="sm" style={{ width: '280px' }}>
                 <InputGroup.Text>🔍</InputGroup.Text>
-                <Form.Control placeholder="Cari Kode / Tujuan / Pemesan..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Form.Control placeholder="Cari Kode / Tujuan / NIP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </InputGroup>
               <Form.Select size="sm" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: '130px' }}>
                 <option value="all">Semua Status</option>
@@ -295,8 +302,10 @@ const Dashboard = () => {
                   <tr key={booking.id}>
                     <td className="fw-bold text-primary">{booking.booking_code}</td>
                     
-                    {/* Tambahan Kolom Pemesan dan Departemen */}
-                    <td className="fw-bold">{booking.User?.name || 'Menunggu Relasi'}</td>
+                    {/* 👇 NIP PEMESAN DITAMPILKAN DI SINI 👇 */}
+                    <td className="fw-bold">
+                      {booking.User?.name ? `${booking.User.name} - ${booking.User.nip}` : 'Menunggu Relasi'}
+                    </td>
                     <td>{booking.User?.Department?.name || '-'}</td>
                     
                     <td>{new Date(booking.start_time).toLocaleDateString('id-ID')}</td>
@@ -307,8 +316,10 @@ const Dashboard = () => {
                       {booking.destination_address}
                     </td>
                     
-                    {/* Tambahan Kolom Supir dan Kendaraan */}
-                    <td>{booking.Assignment?.Driver?.User?.name || <span className="fst-italic text-muted">Belum Diplot</span>}</td>
+                    {/* 👇 NIP SUPIR DITAMPILKAN DI SINI 👇 */}
+                    <td>
+                      {booking.Assignment?.Driver?.User?.name ? `${booking.Assignment.Driver.User.name} - ${booking.Assignment.Driver.User.nip}` : <span className="fst-italic text-muted">Belum Diplot</span>}
+                    </td>
                     <td>{booking.Assignment?.Vehicle?.license_plate || <span className="fst-italic text-muted">Belum Diplot</span>}</td>
                     
                     <td>{getStatusBadge(booking.status)}</td>

@@ -6,6 +6,8 @@ import Vehicles from './pages/Vehicles';
 import Drivers from './pages/Drivers';
 import Trips from './pages/Trips';
 import Reports from './pages/Reports';
+import FormBooking from './pages/FormBooking';
+import Approvals from './pages/Approvals';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
 
@@ -21,6 +23,8 @@ function App() {
         <Route path="/drivers" element={<ProtectedRoute><MainLayout><Drivers /></MainLayout></ProtectedRoute>} />
         <Route path="/trips" element={<ProtectedRoute><MainLayout><Trips /></MainLayout></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><MainLayout><Reports /></MainLayout></ProtectedRoute>} />
+        <Route path="/my-bookings" element={<FormBooking />} />
+        <Route path="/approvals" element={<Approvals />} />
         
       </Routes>
     </BrowserRouter>

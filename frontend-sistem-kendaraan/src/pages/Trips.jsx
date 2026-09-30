@@ -21,11 +21,15 @@ const Trips = () => {
     fetchTrips();
   }, [token]);
 
-  const filteredTrips = trips.filter((t) => 
-    t.booking_code?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.destination_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()) // Asumsi relasi ke User (Pemesan) sudah ada di backend
-  );
+  // Bisa mencari berdasarkan NIP Pemesan atau NIP Supir
+  const filteredTrips = trips.filter((t) => {
+    const searchLower = searchTerm.toLowerCase();
+    return t.booking_code?.toLowerCase().includes(searchLower) || 
+           t.destination_address?.toLowerCase().includes(searchLower) ||
+           t.User?.name?.toLowerCase().includes(searchLower) ||
+           t.User?.nip?.toLowerCase().includes(searchLower) ||
+           t.Assignment?.Driver?.User?.nip?.toLowerCase().includes(searchLower);
+  });
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -41,9 +45,9 @@ const Trips = () => {
   const handleExport = () => {
     const headers = "Kode Booking,Pemesan,Departemen,Tgl Mulai,Tgl Selesai,Tujuan,Supir,Kendaraan,Status\n";
     const rows = filteredTrips.map(t => {
-      const pemesan = t.User?.name || '-';
-      const departemen = t.User?.Department?.name || '-'; // Asumsi relasi Departemen ada
-      const supir = t.Assignment?.Driver?.User?.name || 'Belum Diplot';
+      const pemesan = t.User?.name ? `${t.User.name} - ${t.User.nip}` : '-';
+      const departemen = t.User?.Department?.name || '-';
+      const supir = t.Assignment?.Driver?.User?.name ? `${t.Assignment.Driver.User.name} - ${t.Assignment.Driver.User.nip}` : 'Belum Diplot';
       const kendaraan = t.Assignment?.Vehicle?.license_plate || 'Belum Diplot';
       return `${t.booking_code},"${pemesan}","${departemen}",${new Date(t.start_time).toLocaleDateString('id-ID')},${new Date(t.end_time).toLocaleDateString('id-ID')},"${t.destination_address}","${supir}","${kendaraan}",${t.status}`;
     }).join("\n");
@@ -60,9 +64,9 @@ const Trips = () => {
       <h2 className="mb-4 mt-3">Arsip & Riwayat Perjalanan</h2>
       <Card className="shadow-sm border-0">
         <Card.Header className="bg-white border-bottom pt-3 pb-3 d-flex justify-content-between align-items-center">
-          <InputGroup size="sm" style={{ width: '300px' }}>
+          <InputGroup size="sm" style={{ width: '320px' }}>
             <InputGroup.Text>🔍</InputGroup.Text>
-            <Form.Control placeholder="Cari Kode / Tujuan / Nama Pemesan..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Form.Control placeholder="Cari Kode / Tujuan / Nama / NIP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </InputGroup>
           <Button variant="success" size="sm" onClick={handleExport}>📥 Export CSV</Button>
         </Card.Header>
@@ -86,12 +90,18 @@ const Trips = () => {
                 filteredTrips.map(trip => (
                   <tr key={trip.id}>
                     <td className="fw-bold text-primary">{trip.booking_code}</td>
-                    <td className="fw-bold">{trip.User?.name || 'Menunggu Relasi'}</td>
+                    {/* NIP PEMESAN */}
+                    <td className="fw-bold">
+                      {trip.User?.name ? `${trip.User.name} - ${trip.User.nip}` : 'Menunggu Relasi'}
+                    </td>
                     <td>{trip.User?.Department?.name || '-'}</td>
                     <td>{new Date(trip.start_time).toLocaleDateString('id-ID')}</td>
                     <td>{new Date(trip.end_time).toLocaleDateString('id-ID')}</td>
                     <td>{trip.destination_address}</td>
-                    <td>{trip.Assignment?.Driver?.User?.name || <span className="fst-italic text-muted">Belum Diplot</span>}</td>
+                    {/* NIP SUPIR */}
+                    <td>
+                      {trip.Assignment?.Driver?.User?.name ? `${trip.Assignment.Driver.User.name} - ${trip.Assignment.Driver.User.nip}` : <span className="fst-italic text-muted">Belum Diplot</span>}
+                    </td>
                     <td>{trip.Assignment?.Vehicle?.license_plate || <span className="fst-italic text-muted">Belum Diplot</span>}</td>
                     <td>{getStatusBadge(trip.status)}</td>
                   </tr>
