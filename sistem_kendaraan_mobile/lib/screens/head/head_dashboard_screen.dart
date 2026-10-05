@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../../utils/constants.dart';
 import '../login_screen.dart';
 import '../../widgets/plotting_bottom_sheet.dart'; 
+import 'detail_pengajuan_screen.dart';
+import 'pengajuan_screen.dart'; 
+import 'notification_screen.dart';
 
 class HeadDashboardScreen extends StatefulWidget {
   const HeadDashboardScreen({super.key});
@@ -16,11 +19,23 @@ class HeadDashboardScreen extends StatefulWidget {
 class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
   String _nama = "Memuat...";
   String _token = "";
+  String _userId = ""; // Tambahan untuk memanggil API Notif
   
   bool _isLoadingData = true;
   List<dynamic> _pendingTickets = [];
   List<dynamic> _availableVehicles = [];
   List<dynamic> _availableDrivers = [];
+
+  int _totalVehicles = 0;
+  int _availableVehiclesCount = 0;
+  int _inUseVehiclesCount = 0;
+  int _maintenanceVehiclesCount = 0;
+
+  int _menungguPersetujuanCount = 0;
+  int _perluDitugaskanCount = 0;
+  int _sedangBerjalanCount = 0;
+  
+  int _unreadNotifCount = 0; // Tambahan untuk badge lonceng
 
   final Color darkBlue = const Color(0xFF0D3B66);
   final Color orangeBakrie = const Color(0xFFF37021);
@@ -32,11 +47,16 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+ Future<void> _loadUserData() async {
+    const storage = FlutterSecureStorage();
+    final nama = await storage.read(key: 'nama');
+    final token = await storage.read(key: 'token');
+    final id = await storage.read(key: 'id');
+
     setState(() {
-      _nama = prefs.getString('nama') ?? 'Kepala Bagian';
-      _token = prefs.getString('token') ?? '';
+      _nama = nama ?? 'Kepala Bagian';
+      _token = token ?? '';
+      _userId = id ?? '';
     });
     
     if (_token.isNotEmpty) {
@@ -48,30 +68,55 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
 
   Future<void> _fetchDashboardData() async {
     try {
-      final ticketRes = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/bookings/pool/pending-assignments'),
-        headers: {'Authorization': 'Bearer $_token', 'Accept': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      final headers = {'Authorization': 'Bearer $_token', 'Accept': 'application/json'};
 
-      final masterRes = await http.get(
-        Uri.parse('${AppConstants.baseUrl}/bookings/pool/master-data'),
-        headers: {'Authorization': 'Bearer $_token', 'Accept': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      // Tambahkan API Notifikasi ke antrean eksekusi
+      final futures = [
+        http.get(Uri.parse('${AppConstants.baseUrl}/bookings/pool/pending-assignments'), headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/bookings/pool/master-data'), headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/vehicles'), headers: headers),
+        http.get(Uri.parse('${AppConstants.baseUrl}/bookings/history'), headers: headers),
+      ];
 
-      if (ticketRes.statusCode == 200 && masterRes.statusCode == 200) {
-        final ticketData = jsonDecode(ticketRes.body)['data'];
-        final masterData = jsonDecode(masterRes.body)['data'];
+      if (_userId.isNotEmpty) {
+        futures.add(http.get(Uri.parse('${AppConstants.baseUrl}/notifications/user/$_userId'), headers: headers));
+      }
 
-        if (mounted) {
-          setState(() {
-            _pendingTickets = ticketData ?? []; 
+      final results = await Future.wait(futures).timeout(const Duration(seconds: 15));
+
+      if (mounted) {
+        setState(() {
+          if (results[0].statusCode == 200) _pendingTickets = jsonDecode(results[0].body)['data'] ?? [];
+          
+          if (results[1].statusCode == 200) {
+            final masterData = jsonDecode(results[1].body)['data'];
             _availableVehicles = masterData?['vehicles'] ?? [];
             _availableDrivers = masterData?['drivers'] ?? [];
-            _isLoadingData = false;
-          });
-        }
-      } else {
-        if (mounted) setState(() => _isLoadingData = false);
+          }
+
+          if (results[2].statusCode == 200) {
+            final List<dynamic> vehicles = jsonDecode(results[2].body)['data'] ?? [];
+            _totalVehicles = vehicles.length;
+            _availableVehiclesCount = vehicles.where((v) => v['status'] == 'available').length;
+            _inUseVehiclesCount = vehicles.where((v) => v['status'] == 'in_use').length;
+            _maintenanceVehiclesCount = vehicles.where((v) => v['status'] == 'maintenance').length;
+          }
+
+          if (results[3].statusCode == 200) {
+            final List<dynamic> history = jsonDecode(results[3].body)['data'] ?? [];
+            _menungguPersetujuanCount = history.where((b) => b['status'] == 'pending_approval').length;
+            _perluDitugaskanCount = history.where((b) => b['status'] == 'pending_assignment').length;
+            _sedangBerjalanCount = history.where((b) => b['status'] == 'assigned' || b['status'] == 'on_going').length;
+          }
+
+          // Proses Notifikasi jika dikirimkan oleh backend
+          if (results.length > 4 && results[4].statusCode == 200) {
+            final List<dynamic> notifs = jsonDecode(results[4].body)['data'] ?? [];
+            _unreadNotifCount = notifs.where((n) => n['is_read'] == false || n['is_read'] == 0).length;
+          }
+
+          _isLoadingData = false;
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingData = false);
@@ -89,11 +134,8 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const LoginScreen()));
+  void _goToRiwayatScreen() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const PengajuanScreen()));
   }
 
   void _openPlottingSheet(Map<String, dynamic> ticket) {
@@ -181,19 +223,30 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
                                 errorBuilder: (c,e,s) => const Text("BAKRIE ONE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                               ),
                               GestureDetector(
-                                onTap: _logout, 
+                                onTap: () async {
+                                  // Buka layar notifikasi dan tunggu hingga ia ditutup (untuk merefresh badge angka)
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                                  );
+                                  if (result == true) _fetchDashboardData();
+                                }, 
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   children: [
                                     const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
-                                    Positioned(
-                                      right: -2, top: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                        child: const Text('3', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
-                                      ),
-                                    )
+                                    if (_unreadNotifCount > 0)
+                                      Positioned(
+                                        right: -2, top: -2,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                          child: Text(
+                                            _unreadNotifCount > 99 ? '99+' : _unreadNotifCount.toString(), 
+                                            style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)
+                                          ),
+                                        ),
+                                      )
                                   ],
                                 ),
                               )
@@ -227,10 +280,10 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildStatItem(Icons.directions_car, "12", "Total\nKendaraan", const Color(0xFF3F51B5)), 
-                          _buildStatItem(Icons.verified_user_rounded, _isLoadingData ? "-" : _availableVehicles.length.toString(), "Tersedia", Colors.green),
-                          _buildStatItem(Icons.autorenew, "3", "Digunakan", Colors.blue),
-                          _buildStatItem(Icons.build, "1", "Maintenance", orangeBakrie),
+                          _buildStatItem(Icons.directions_car, _isLoadingData ? "-" : _totalVehicles.toString(), "Total\nKendaraan", const Color(0xFF3F51B5)), 
+                          _buildStatItem(Icons.verified_user_rounded, _isLoadingData ? "-" : _availableVehiclesCount.toString(), "Tersedia", Colors.green),
+                          _buildStatItem(Icons.autorenew, _isLoadingData ? "-" : _inUseVehiclesCount.toString(), "Digunakan", Colors.blue),
+                          _buildStatItem(Icons.build, _isLoadingData ? "-" : _maintenanceVehiclesCount.toString(), "Maintenance", orangeBakrie),
                         ],
                       ),
                     ),
@@ -239,7 +292,10 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text("Permintaan Hari Ini", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: darkBlue)),
-                        TextButton(onPressed: (){}, child: const Text("Lihat Semua", style: TextStyle(fontSize: 12, color: Colors.blue))),
+                        TextButton(
+                          onPressed: _goToRiwayatScreen, 
+                          child: const Text("Lihat Semua", style: TextStyle(fontSize: 12, color: Colors.blue))
+                        ),
                       ],
                     ),
                     Container(
@@ -249,11 +305,11 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
                       ),
                       child: Column(
                         children: [
-                          _buildSummaryRow(Icons.access_time_filled, "Menunggu Persetujuan", "5", orangeBakrie), 
+                          _buildSummaryRow(Icons.access_time_filled, "Menunggu Persetujuan", _isLoadingData ? "-" : _menungguPersetujuanCount.toString(), orangeBakrie), 
                           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-                          _buildSummaryRow(Icons.assignment_ind, "Perlu Ditugaskan", _isLoadingData ? "-" : _pendingTickets.length.toString(), Colors.blue),
+                          _buildSummaryRow(Icons.assignment_ind, "Perlu Ditugaskan", _isLoadingData ? "-" : _perluDitugaskanCount.toString(), Colors.blue),
                           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-                          _buildSummaryRow(Icons.local_taxi, "Sedang Berjalan", "4", const Color(0xFF3F51B5)), 
+                          _buildSummaryRow(Icons.local_taxi, "Sedang Berjalan", _isLoadingData ? "-" : _sedangBerjalanCount.toString(), const Color(0xFF3F51B5)), 
                         ],
                       ),
                     ),
@@ -262,7 +318,10 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text("Pengajuan Terbaru", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: darkBlue)),
-                        TextButton(onPressed: (){}, child: const Text("Lihat Semua", style: TextStyle(fontSize: 12, color: Colors.blue))),
+                        TextButton(
+                          onPressed: _goToRiwayatScreen, 
+                          child: const Text("Lihat Semua", style: TextStyle(fontSize: 12, color: Colors.blue))
+                        ),
                       ],
                     ),
                     if (_isLoadingData)
@@ -300,24 +359,35 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
   }
 
   Widget _buildSummaryRow(IconData icon, String title, String count, Color iconColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: iconColor, size: 20),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _goToRiwayatScreen, 
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: darkBlue, fontSize: 13))),
+              Text(count, style: TextStyle(fontWeight: FontWeight.bold, color: darkBlue, fontSize: 16)),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 18), 
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(child: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: darkBlue, fontSize: 13))),
-          Text(count, style: TextStyle(fontWeight: FontWeight.bold, color: darkBlue, fontSize: 16)),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildMockupTicketCard(Map<String, dynamic> ticket) {
+    final String deptName = ticket['Pemesan']?['Department']?['name'] ?? 'Departemen';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -341,7 +411,7 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(ticket['Pemesan']?['name'] ?? 'Karyawan', style: TextStyle(fontWeight: FontWeight.bold, color: darkBlue, fontSize: 15)),
-                    const Text("Produksi", style: TextStyle(color: Colors.grey, fontSize: 12)), 
+                    Text(deptName, style: const TextStyle(color: Colors.grey, fontSize: 12)), 
                   ],
                 ),
               ),
@@ -371,7 +441,14 @@ class _HeadDashboardScreenState extends State<HeadDashboardScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailPengajuanScreen(ticket: ticket),
+                      ),
+                    );
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: darkBlue, side: BorderSide(color: darkBlue),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

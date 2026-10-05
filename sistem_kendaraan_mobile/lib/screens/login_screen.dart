@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_api/auth_service.dart';
-// KUNCI PERBAIKAN: Import file navigasi yang benar
-import '../navigation/navigation.dart'; 
+import '../navigation/head_navigation.dart'; 
 import 'driver/driver_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -50,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = true);
+    // AuthService sekarang sudah mengurus penyimpanan SharedPreferences
     final result = await AuthService.login(nip, password);
     setState(() => _isLoading = false);
 
@@ -59,16 +59,15 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!context.mounted) return;
         final role = result['role'];
         if (role == 'kepala_bagian' || role == 'head_of_vehicle') {
-          // KUNCI: Arahkan ke HeadMainScreen
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HeadMainScreen()));
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HeadNavigation()));
         } else if (role == 'supir' || role == 'driver') {
           Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const DriverDashboardScreen()));
         } else {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HeadMainScreen()));
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HeadNavigation()));
         }
       });
     } else {
-      _showTopNotification(result['message'], Colors.red.shade700);
+      _showTopNotification(result['message'] ?? 'Login Gagal', Colors.red.shade700);
     }
   }
 

@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import '../../utils/constants.dart';
 
 class PlottingBottomSheet extends StatefulWidget {
-  // "Paket kiriman" dari layar utama
   final Map<String, dynamic> ticket;
   final List<dynamic> availableVehicles;
   final List<dynamic> availableDrivers;
@@ -29,12 +28,14 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
   String? selectedDriverId;
   bool isSubmitting = false;
 
-  // Fungsi menembak API (Pindah ke sini agar file utama tidak sesak)
   Future<void> _assignTicket() async {
     setState(() => isSubmitting = true);
 
     try {
-      final url = Uri.parse('${AppConstants.baseUrl}/bookings/${widget.ticket['id']}/assign');
+      // Memastikan ID tiket terbaca dengan aman
+      final String ticketId = widget.ticket['id'].toString();
+      final url = Uri.parse('${AppConstants.baseUrl}/bookings/$ticketId/assign');
+      
       final response = await http.post(
         url,
         headers: {
@@ -52,23 +53,24 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
-        Navigator.pop(context); // Tutup Bottom Sheet
+        Navigator.pop(context); 
         
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Sukses!'), backgroundColor: Colors.green),
+          SnackBar(content: Text(result['message'] ?? 'Penugasan berhasil!'), backgroundColor: Colors.green),
         );
         
-        // Panggil fungsi refresh yang dikirim dari layar utama
+        // Memicu Auto-Refresh di halaman Home
         widget.onSuccess(); 
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Gagal menugaskan!'), backgroundColor: Colors.red),
+          SnackBar(content: Text(result['message'] ?? 'Gagal menugaskan tiket!'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Terjadi kesalahan koneksi!'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Terjadi kesalahan koneksi server!'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -79,6 +81,10 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Mengecek ketersediaan data untuk mengunci dropdown jika kosong
+    final bool hasVehicles = widget.availableVehicles.isNotEmpty;
+    final bool hasDrivers = widget.availableDrivers.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
@@ -99,7 +105,7 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
           const Text("Plotting Penugasan", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
-            "Tiket: ${widget.ticket['booking_code']} - ${widget.ticket['Pemesan']?['name']}", 
+            "Tiket: ${widget.ticket['booking_code'] ?? '-'} | ${widget.ticket['Pemesan']?['name'] ?? 'Karyawan'}", 
             style: TextStyle(color: Colors.grey.shade600)
           ),
           const SizedBox(height: 24),
@@ -111,16 +117,18 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              filled: !hasVehicles,
+              fillColor: Colors.grey.shade100,
             ),
-            hint: const Text("Pilih Mobil Tersedia"),
+            hint: Text(hasVehicles ? "Pilih Mobil Tersedia" : "Tidak ada mobil tersedia"),
             value: selectedVehicleId,
-            items: widget.availableVehicles.map((vehicle) {
+            items: hasVehicles ? widget.availableVehicles.map((vehicle) {
               return DropdownMenuItem<String>(
                 value: vehicle['id'].toString(),
                 child: Text("${vehicle['brand_model']} (${vehicle['license_plate']})"),
               );
-            }).toList(),
-            onChanged: (val) => setState(() => selectedVehicleId = val),
+            }).toList() : null,
+            onChanged: hasVehicles ? (val) => setState(() => selectedVehicleId = val) : null,
           ),
           const SizedBox(height: 20),
 
@@ -131,16 +139,18 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              filled: !hasDrivers,
+              fillColor: Colors.grey.shade100,
             ),
-            hint: const Text("Pilih Supir Standby"),
+            hint: Text(hasDrivers ? "Pilih Supir Standby" : "Tidak ada supir standby"),
             value: selectedDriverId,
-            items: widget.availableDrivers.map((driver) {
+            items: hasDrivers ? widget.availableDrivers.map((driver) {
               return DropdownMenuItem<String>(
                 value: driver['id'].toString(),
                 child: Text(driver['User']?['name'] ?? 'Tanpa Nama'), 
               );
-            }).toList(),
-            onChanged: (val) => setState(() => selectedDriverId = val),
+            }).toList() : null,
+            onChanged: hasDrivers ? (val) => setState(() => selectedDriverId = val) : null,
           ),
           const SizedBox(height: 32),
 
@@ -150,18 +160,19 @@ class _PlottingBottomSheetState extends State<PlottingBottomSheet> {
             height: 50,
             child: ElevatedButton(
               onPressed: (selectedVehicleId != null && selectedDriverId != null && !isSubmitting)
-                  ? _assignTicket // Panggil fungsi API jika tombol bisa diklik
+                  ? _assignTicket 
                   : null, 
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange.shade700,
+                disabledBackgroundColor: Colors.orange.shade200,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: isSubmitting 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white))
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Text("Tugaskan Sekarang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 10), // Jarak ekstra untuk area navigasi bawah layar HP
         ],
       ),
     );
